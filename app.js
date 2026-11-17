@@ -2,7 +2,7 @@
 // All entries are stored only on this device (IndexedDB).
 'use strict';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.2.0';
 
 /* ---------------- small helpers ---------------- */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -789,6 +789,7 @@ function viewSettings(main) {
   <section class="card">
     <h2>About this app</h2>
     <p class="muted">Health Log ${APP_VERSION}. A personal journal — not a medical device. The analysis shows patterns in what you logged; it can’t diagnose anything or prove a cause. Share your report with your doctor before changing your diet or treatment.</p>
+    <button class="btn block" id="upd">🔄 Check for updates</button>
     <button class="btn danger block" id="wipe">Delete all my data</button>
   </section>`;
   $$('[data-look]', main).forEach(b => (b.onclick = () => {
@@ -799,6 +800,7 @@ function viewSettings(main) {
   }));
   $('#sname').onchange = async e => { SETTINGS.name = e.target.value.trim(); await saveSettings(); toast('Saved'); };
   $('#bk').onclick = backup;
+  $('#upd').onclick = checkForUpdate;
   $('#rs').onchange = e => e.target.files[0] && restore(e.target.files[0]);
   $('#csv').onclick = exportCSV;
   $('#wipe').onclick = async () => {
@@ -870,6 +872,30 @@ async function exportCSV() {
   await shareOrDownload(new Blob([rows.map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv' }), `${fileSlug()}health-log-${todayISO()}.csv`);
 }
 
+/* ---------------- app updates ---------------- */
+// iPhones usually resume a Home Screen app instead of restarting it, so check
+// for a new version whenever the app comes back to the screen, and reload into
+// it as soon as it's ready (unless a pop-up is open).
+let swReg = null;
+function setupUpdates() {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => { swReg = r; }).catch(() => {});
+  let reloading = false;
+  const reload = () => { if (!reloading) { reloading = true; location.reload(); } };
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return; // first install, nothing to refresh
+    if ($('#sheet').hidden) reload();
+    else $('#sheet').onClose = (cb => saved => { cb && cb(saved); reload(); })($('#sheet').onClose);
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') swReg?.update().catch(() => {}); });
+}
+async function checkForUpdate() {
+  toast('Checking for updates…');
+  try { await swReg?.update(); } catch { /* offline */ }
+  setTimeout(() => location.reload(), 1200);
+}
+
 /* ---------------- start ---------------- */
 (async function start() {
   try {
@@ -885,5 +911,5 @@ async function exportCSV() {
   $('#back').onclick = () => (history.length > 1 ? history.back() : go('analysis'));
   window.addEventListener('hashchange', () => { closeSheet(); $('#toast').hidden = true; window.scrollTo(0, 0); render(); });
   render();
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  setupUpdates();
 })();
