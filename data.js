@@ -406,20 +406,36 @@ const SYMPTOM_GROUPS = {
  */
 const FIG_W = 200, FIG_H = 500;
 
-const BODY_SHAPES = {
-  head: [100, 40, 26, 32],
-  neck: [88, 66, 24, 24],
-  torso: 'M62 90 C80 84 120 84 138 90 C150 94 156 104 154 120 L148 175 C146 195 148 210 152 235 L150 262 C130 274 70 274 50 262 L48 235 C52 210 54 195 52 175 L46 120 C44 104 50 94 62 90 Z',
-  // limbs as stroked polylines: [points, width]
-  limbs: [
-    ['56,100 30,188', 26], ['30,188 16,258', 21],
-    ['144,100 170,188', 26], ['170,188 184,258', 21],
-    ['77,250 78,370', 42], ['78,370 80,458', 30],
-    ['123,250 122,370', 42], ['122,370 120,458', 30],
-  ],
-  hands: [[12, 282, 11, 19], [188, 282, 11, 19]],
-  feet: [[80, 478, 15, 11], [120, 478, 15, 11]],
-};
+// Body outline: points down the left half (as you look at it) from the top of
+// the head to the crotch; the right half is mirrored. A smooth curve is drawn
+// through them. Landmarks line up with the regions below.
+const BODY_HALF = [
+  [100, 6], [88, 8], [79, 15], [74, 27], [73, 40], [75, 52], [79, 61], [85, 68], [89, 73],
+  [89, 82], [82, 87], [70, 90], [58, 94], [49, 101], [44, 112],
+  [40, 127], [35, 150], [31, 172], [28, 188], [23, 210], [18, 232], [13, 252],
+  [9, 262], [4, 273], [3, 287], [5, 299], [10, 308], [16, 309], [20, 301], [23, 289], [25, 277], [26, 265],
+  [29, 245], [35, 222], [41, 199], [46, 177], [50, 156], [54, 138],
+  [57, 131], [59, 150], [61, 172], [60, 192], [56, 214], [53, 236], [53, 258],
+  [55, 286], [58, 318], [62, 348], [63, 368], [62, 384], [60, 406], [63, 432], [67, 452],
+  [68, 464], [64, 476], [64, 487], [72, 493], [86, 494], [93, 488], [93, 474], [91, 458],
+  [92, 432], [94, 404], [93, 384], [94, 366], [96, 338], [98, 304], [99, 284], [100, 276],
+];
+function smoothClosedPath(pts) {
+  // Catmull-Rom spline through the points, as cubic Bézier segments.
+  const n = pts.length, f = v => +v.toFixed(1);
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${p2[0]} ${p2[1]}`;
+  }
+  return d + ' Z';
+}
+const BODY_PATH = (() => {
+  const mid = BODY_HALF.slice(1, -1);
+  const right = mid.map(([x, y]) => [200 - x, y]).reverse();
+  return smoothClosedPath([BODY_HALF[0], ...mid, BODY_HALF[BODY_HALF.length - 1], ...right]);
+})();
+
 
 const sideName = (view, isLeftHalf) => (view === 'front' ? (isLeftHalf ? 'Right' : 'Left') : (isLeftHalf ? 'Left' : 'Right'));
 

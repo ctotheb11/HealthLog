@@ -439,27 +439,38 @@ const FULL_VB = [0, 0, 420, 500];
 
 function figureSVG(view, opts = {}) {
   const ox = FIG_X[view];
-  const B = BODY_SHAPES;
-  const layer = (fill, extra) => {
-    const sw = extra;
-    return `<g fill="${fill}" stroke="${fill}" stroke-linejoin="round">
-      <ellipse cx="${B.head[0]}" cy="${B.head[1]}" rx="${B.head[2]}" ry="${B.head[3]}" stroke-width="${sw}"/>
-      <rect x="${B.neck[0]}" y="${B.neck[1]}" width="${B.neck[2]}" height="${B.neck[3]}" rx="6" stroke-width="${sw}"/>
-      <path d="${B.torso}" stroke-width="${sw}"/>
-      ${B.limbs.map(([pts, w]) => `<polyline points="${pts}" fill="none" stroke-width="${w + sw}" stroke-linecap="round"/>`).join('')}
-      ${[...B.hands, ...B.feet].map(e => `<ellipse cx="${e[0]}" cy="${e[1]}" rx="${e[2]}" ry="${e[3]}" stroke-width="${sw}"/>`).join('')}
-    </g>`;
-  };
-  const detail = view === 'front'
-    ? `<g class="detail"><path d="M72 96 Q86 102 98 98 M102 98 Q114 102 128 96"/><circle cx="100" cy="206" r="2"/><path d="M88 54 Q100 60 112 54" /></g>`
-    : `<g class="detail"><path d="M100 92 V232"/><path d="M68 112 Q78 132 90 126 M132 112 Q122 132 110 126"/><path d="M80 252 Q100 262 120 252"/></g>`;
+  const id = `${view}${opts.idSuffix || ''}`;
+  const front = view === 'front';
+  // Soft anatomy hints: they show which side is which without being busy.
+  const detail = front
+    ? `<path d="M74 97 Q86 101 97 99 M103 99 Q114 101 126 97"/>
+       <path d="M100 104 V146"/>
+       <path d="M78 140 Q90 150 100 147 Q110 150 122 140" opacity=".55"/>
+       <path d="M88 176 Q100 179 112 176" opacity=".25"/>
+       <ellipse cx="100" cy="212" rx="1.6" ry="2.4" class="dot"/>
+       <path d="M70 238 Q84 258 100 272 M130 238 Q116 258 100 272" opacity=".45"/>
+       <path d="M72 362 Q78 368 86 362 M128 362 Q122 368 114 362" opacity=".5"/>
+       <path d="M90 36 Q92.5 34.5 95 36 M105 36 Q107.5 34.5 110 36" opacity=".35"/>`
+    : `<path d="M100 84 V236" stroke-dasharray="1.5 4" opacity=".8"/>
+       <path d="M66 110 Q72 136 90 132 M134 110 Q128 136 110 132"/>
+       <path d="M92 228 Q100 222 108 228" opacity=".5"/>
+       <path d="M100 240 V270 M66 266 Q82 276 98 270 M134 266 Q118 276 102 270" opacity=".6"/>
+       <path d="M70 370 Q78 374 86 370 M130 370 Q122 374 114 370" opacity=".5"/>
+       <path d="M86 26 Q100 18 114 26" opacity=".35"/>`;
   return `<g transform="translate(${ox},0)" data-view="${view}">
-    ${opts.glow ? `<g class="glow">${layer('var(--glow)', 14)}</g>` : ''}
-    ${layer('var(--body-line)', 3)}
-    ${layer('var(--body)', 0)}
-    ${detail}
-    <text x="12" y="16" class="sidelbl">${view === 'front' ? 'R' : 'L'}</text>
-    <text x="188" y="16" class="sidelbl" text-anchor="end">${view === 'front' ? 'L' : 'R'}</text>
+    <defs>
+      <linearGradient id="skin-${id}" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" style="stop-color:var(--body-shade)"/><stop offset=".3" style="stop-color:var(--body)"/>
+        <stop offset=".55" style="stop-color:var(--body-hi)"/><stop offset=".75" style="stop-color:var(--body)"/>
+        <stop offset="1" style="stop-color:var(--body-shade)"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="100" cy="497" rx="62" ry="4" class="floor"/>
+    ${opts.glow ? `<path d="${BODY_PATH}" class="glow" fill="none" stroke="var(--glow)" stroke-width="14" stroke-linejoin="round"/>` : ''}
+    <path d="${BODY_PATH}" fill="url(#skin-${id})" stroke="var(--body-line)" stroke-width="1.6" stroke-linejoin="round"/>
+    <g class="detail">${detail}</g>
+    <text x="12" y="16" class="sidelbl">${front ? 'R' : 'L'}</text>
+    <text x="188" y="16" class="sidelbl" text-anchor="end">${front ? 'L' : 'R'}</text>
   </g>`;
 }
 
@@ -507,7 +518,7 @@ function viewHealth(main) {
   <h2 class="section">${relDay(H.date)}</h2>
   ${entries.length ? `<ul class="items">${entries.map(e => `<li>
       <span class="sevdot" style="background:${sevColor(maxSev(e) || 1)}">${maxSev(e) || ''}</span>
-      <button class="it plain" data-hedit="${e.id}"><div>${fmtTime(e.time)} · ${esc(e.regionLabel)}${e.shape?.kind === 'area' ? ' (area)' : ''}</div>
+      <button class="it plain" data-hedit="${e.id}"><div>${fmtTime(e.time)} · ${esc(e.regionLabel)}${e.shape?.kind === 'area' ? ' · area' : ''}</div>
       <div class="tags">${e.items.map(i => `<span class="tag">${esc(i.name)} ${i.sev}</span>`).join('')}${e.notes ? `<span class="muted"> ${esc(e.notes)}</span>` : ''}</div></button>
       <button class="x" data-hdel="${e.id}" aria-label="Delete entry">✕</button></li>`).join('')}</ul>`
     : '<p class="empty">Nothing logged for this day.</p>'}`;
