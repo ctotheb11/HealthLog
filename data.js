@@ -339,23 +339,51 @@ const BUILTIN_FOODS = [...parseList(FOOD_LIST, false), ...parseList(DRINK_LIST, 
 
 /* ---------------- meals ---------------- */
 const MEALS = [
-  { key: 'breakfast', label: 'Breakfast', time: '08:00' },
-  { key: 'snack1', label: 'AM Snack', time: '10:30' },
-  { key: 'lunch', label: 'Lunch', time: '12:30' },
-  { key: 'snack2', label: 'PM Snack', time: '15:30' },
-  { key: 'dinner', label: 'Dinner', time: '18:30' },
-  { key: 'snack3', label: 'Evening Snack', time: '20:30' },
+  { key: 'breakfast', label: 'Breakfast', emoji: '🥞', time: '08:00' },
+  { key: 'snack1', label: 'AM Snack', emoji: '🍎', time: '10:30' },
+  { key: 'lunch', label: 'Lunch', emoji: '🥪', time: '12:30' },
+  { key: 'snack2', label: 'PM Snack', emoji: '🍪', time: '15:30' },
+  { key: 'dinner', label: 'Dinner', emoji: '🍝', time: '18:30' },
+  { key: 'snack3', label: 'Evening Snack', emoji: '🌙', time: '20:30' },
 ];
+
+// A friendly emoji for a food or drink, matched on its name (first match wins).
+const FOOD_EMOJI = [
+  ['ice cream|frozen yogurt|popsicle|milkshake', '🍦'], ['cupcake', '🧁'], ['cake|brownie|pie', '🍰'], ['cookie', '🍪'],
+  ['donut', '🍩'], ['chocolate', '🍫'], ['candy|gumm|gelatin', '🍬'], ['popcorn', '🍿'], ['pretzel', '🥨'],
+  ['peanut|almond|cashew|walnut|pecan|pistachio|nuts|trail mix|seeds', '🥜'], ['coffee|espresso|latte', '☕'],
+  ['tea|chai', '🍵'], ['beer', '🍺'], ['wine', '🍷'], ['cocktail|liquor|seltzer', '🍹'], ['smoothie|protein shake', '🥤'],
+  ['milk', '🥛'], ['juice|lemonade', '🧃'], ['soda|root beer|ginger ale|energy|sports drink|kombucha', '🥤'],
+  ['water|electrolyte', '💧'], ['broth|soup|chili|stew', '🍲'], ['pancake', '🥞'], ['waffle', '🧇'], ['bacon', '🥓'],
+  ['egg|omelet', '🍳'], ['bagel', '🥯'], ['croissant', '🥐'], ['oat|cereal|granola|grits|cream of wheat|yogurt|pudding', '🥣'],
+  ['pizza', '🍕'], ['burger', '🍔'], ['hot dog', '🌭'], ['taco|nacho', '🌮'], ['burrito|quesadilla|enchilada|wrap', '🌯'],
+  ['sandwich|sub |blt|grilled cheese|hoagie', '🥪'], ['sushi', '🍣'], ['shrimp|crab|lobster', '🍤'],
+  ['salmon|tuna|fish|tilapia', '🐟'], ['chicken|turkey|nugget|wing', '🍗'], ['steak|beef|pork|ribs|lamb|meat|ham|sausage|pepperoni|jerky|gyro|roast', '🥩'],
+  ['spaghetti|pasta|lasagna|mac and|alfredo|couscous', '🍝'], ['ramen|noodle|pho|pad thai', '🍜'], ['curry', '🍛'],
+  ['fried rice|rice', '🍚'], ['fries|tater|hash brown', '🍟'], ['potato', '🥔'], ['chips', '🥔'], ['salad|lettuce|spinach|kale|coleslaw', '🥗'],
+  ['broccoli|cauliflower|brussels|cabbage|asparagus|green bean|zucchini|squash|celery|vegetable|stir fry', '🥦'],
+  ['carrot', '🥕'], ['corn', '🌽'], ['tomato|salsa|ketchup', '🍅'], ['pepper|jalap|hot sauce', '🌶️'], ['cucumber|pickle', '🥒'],
+  ['mushroom', '🍄'], ['onion', '🧅'], ['garlic', '🧄'], ['avocado|guacamole', '🥑'], ['olive', '🫒'],
+  ['apple', '🍎'], ['banana', '🍌'], ['orange|grapefruit', '🍊'], ['strawberr|raspberr|blackberr', '🍓'], ['blueberr', '🫐'],
+  ['grape|raisin|dried fruit', '🍇'], ['watermelon|cantaloupe|honeydew', '🍉'], ['pineapple', '🍍'], ['mango', '🥭'],
+  ['peach|plum', '🍑'], ['pear', '🍐'], ['cherr', '🍒'], ['kiwi', '🥝'], ['lemon|lime', '🍋'], ['fruit', '🍓'],
+  ['bread|toast|roll|muffin|biscuit|tortilla|cracker|rice cake', '🍞'], ['cheese', '🧀'], ['butter', '🧈'], ['honey|syrup|jam|jelly|sugar|sweetener', '🍯'],
+  ['bean|lentil|chickpea|hummus|edamame|tofu|tempeh', '🫘'], ['sauerkraut|kimchi', '🥬'],
+].map(([k, e]) => [new RegExp(k, 'i'), e]);
+function foodEmoji(name, drink) {
+  const hit = FOOD_EMOJI.find(([re]) => re.test(name));
+  return hit ? hit[1] : drink ? '🥤' : '🍽️';
+}
 
 /* ---------------- stool (Bristol stool scale) ---------------- */
 const STOOL_TYPES = [
-  { type: 1, label: 'Separate hard lumps', note: 'Severe constipation' },
-  { type: 2, label: 'Lumpy, sausage-shaped', note: 'Mild constipation' },
-  { type: 3, label: 'Sausage with cracks', note: 'Normal' },
-  { type: 4, label: 'Smooth, soft snake', note: 'Normal' },
-  { type: 5, label: 'Soft blobs, clear edges', note: 'Lacking fiber' },
-  { type: 6, label: 'Mushy, ragged pieces', note: 'Mild diarrhea' },
-  { type: 7, label: 'Watery, no solid pieces', note: 'Diarrhea' },
+  { type: 1, label: 'Hard little pebbles', note: 'Very constipated' },
+  { type: 2, label: 'Lumpy & hard log', note: 'A bit constipated' },
+  { type: 3, label: 'Log with cracks', note: 'Normal 👍' },
+  { type: 4, label: 'Smooth & soft snake', note: 'Perfect! ⭐' },
+  { type: 5, label: 'Soft blobs', note: 'A little soft' },
+  { type: 6, label: 'Mushy pieces', note: 'Kind of runny' },
+  { type: 7, label: 'All watery', note: 'Diarrhea' },
 ];
 const STOOL_AMOUNTS = [
   { key: 'light', label: 'Light' }, { key: 'medium', label: 'Medium' }, { key: 'heavy', label: 'Heavy' },

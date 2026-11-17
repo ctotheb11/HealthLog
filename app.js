@@ -166,7 +166,45 @@ const TABS = [
   { key: 'health', label: 'Health', icon: '<svg viewBox="0 0 32 32" aria-hidden="true" class="medbox"><rect x="3" y="3" width="26" height="26" rx="6" fill="#fff" stroke="#c9ccd2" stroke-width="1.5"/><path d="M13 8h6v5h5v6h-5v5h-6v-5H8v-6h5z" fill="#e0262f"/></svg>' },
   { key: 'analysis', label: 'Analysis', icon: '<span class="emoji" aria-hidden="true">📊</span>' },
 ];
-const TITLES = { food: 'Food & drink', stool: 'Bowel movements', health: 'How I feel', analysis: 'My patterns', settings: 'Settings', report: 'Doctor report' };
+const TITLES = { food: 'What did I eat?', stool: 'Bathroom log', health: 'How do I feel?', analysis: 'My patterns', settings: 'Settings', report: 'Doctor report' };
+const TITLE_EMOJI = { food: '🍽️', stool: '🚽', health: '💗', analysis: '🔍', settings: '⚙️', report: '📄' };
+const isSimple = () => document.documentElement.classList.contains('simple');
+
+/* ---------------- fun bits ---------------- */
+const CHEERS = ['Nice job! 🎉', 'Got it! 🙌', 'Awesome! 🌟', 'Great logging! ⭐', 'Way to go! 🎈', 'Super! 💪'];
+function celebrate(from, msg) {
+  const streak = streakDays();
+  toast(msg || (streak >= 2 && Math.random() < 0.5 ? `🔥 ${streak}-day streak!` : CHEERS[Math.floor(Math.random() * CHEERS.length)]));
+  if (isSimple() || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = from?.getBoundingClientRect?.() || { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 };
+  const x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+  const colors = ['#ff6b6b', '#ffd93d', '#6bcB77', '#4d96ff', '#c77dff', '#ff9a3c'];
+  const emo = ['⭐', '🎉', '💖', '✨'];
+  for (let i = 0; i < 26; i++) {
+    const c = document.createElement('i');
+    const isE = i % 6 === 0;
+    c.className = 'confetti' + (isE ? ' e' : '');
+    if (isE) c.textContent = emo[i % emo.length]; else c.style.background = colors[i % colors.length];
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, dist = 90 + Math.random() * 140;
+    c.style.left = x0 + 'px'; c.style.top = y0 + 'px';
+    c.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    c.style.setProperty('--dy', Math.sin(ang) * dist + 60 + 'px');
+    c.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 1100);
+  }
+}
+// Consecutive days (ending today, or yesterday if nothing yet today) with any entry.
+function streakDays() {
+  const days = new Set([...DATA.meals, ...DATA.stools, ...DATA.symptoms].map(r => r.date));
+  let d = todayISO();
+  if (!days.has(d)) d = addDays(d, -1);
+  let n = 0;
+  while (days.has(d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+const SEV_FACES = [[2, '🙂', 'A little'], [4, '😕', 'Some'], [6, '😣', 'Quite a bit'], [8, '😖', 'A lot'], [10, '😭', 'Worst ever']];
+const sevFace = v => SEV_FACES.find(f => v <= f[0]);
 
 function route() {
   const [tab, q] = location.hash.replace(/^#\/?/, '').split('?');
@@ -175,8 +213,12 @@ function route() {
 function go(tab) { location.hash = '#/' + tab; }
 
 function renderShell(tab) {
-  $('#tabs').innerHTML = TABS.map(t => `<a href="#/${t.key}" class="tab ${t.key === tab ? 'on' : ''}" aria-label="${t.label}" ${t.key === tab ? 'aria-current="page"' : ''}>${t.icon}</a>`).join('');
-  $('#title').textContent = TITLES[tab] || '';
+  $('#tabs').innerHTML = TABS.map(t => `<a href="#/${t.key}" class="tab tab-${t.key} ${t.key === tab ? 'on' : ''}" aria-label="${t.label}" ${t.key === tab ? 'aria-current="page"' : ''}><span class="bub">${t.icon}</span></a>`).join('');
+  $('#title').innerHTML = TITLES[tab] ? `${isSimple() ? '' : `<span class="ti" aria-hidden="true">${TITLE_EMOJI[tab]}</span>`}${TITLES[tab]}` : '';
+  const st = streakDays(), sEl = $('#streak');
+  sEl.hidden = !(st >= 2 && tab !== 'settings' && tab !== 'report');
+  sEl.textContent = `🔥 ${st}`;
+  sEl.title = `${st}-day logging streak`;
   $('#back').hidden = !(tab === 'settings' || tab === 'report');
   $('#gear').hidden = tab === 'settings' || tab === 'report';
 }
@@ -244,7 +286,7 @@ function viewFood(main) {
       const saved = mealRec(f.date, m.key);
       const dr = f.drafts[`${f.date}|${m.key}`];
       const badge = dr?.dirty ? '<i class="dot unsaved" title="Not saved"></i>' : saved ? `<i class="count">${saved.items.length}</i>` : '';
-      return `<button class="meal ${m.key === f.slot ? 'on' : ''}" data-slot="${m.key}" aria-pressed="${m.key === f.slot}">${m.label}${badge}</button>`;
+      return `<button class="meal ${m.key === f.slot ? 'on' : ''}" data-slot="${m.key}" aria-pressed="${m.key === f.slot}"><span class="me" aria-hidden="true">${m.emoji}</span>${m.label}${badge}</button>`;
     }).join('')}
   </div>
   <div class="search">
@@ -258,7 +300,7 @@ function viewFood(main) {
       <button data-panel="freq" class="${f.panel === 'freq' ? 'on' : ''}">Frequent</button>
     </div>
     <div class="chips">
-      ${list.length ? list.map(x => `<button class="chip add" data-add="${esc(x.name)}">${esc(x.name)}</button>`).join('')
+      ${list.length ? list.map(x => `<button class="chip add" data-add="${esc(x.name)}">${foodEmoji(x.name, x.drink)} ${esc(x.name)}</button>`).join('')
         : `<p class="muted">${f.panel === 'fav' ? 'Tap ☆ next to any item in your list to make it a favorite.' : 'Items you log often will show up here.'}</p>`}
     </div>
   </details>
@@ -267,9 +309,10 @@ function viewFood(main) {
     const info = foodInfo(it.name);
     return `<li>
       <button class="star ${info.fav ? 'on' : ''}" data-star="${esc(it.name)}" aria-label="${info.fav ? 'Remove from' : 'Add to'} favorites">${info.fav ? '★' : '☆'}</button>
-      <div class="it"><div>${info.drink ? '🥤 ' : ''}${esc(it.name)}</div><div class="tags">${tagChips(it.tags)}</div></div>
+      <span class="fe" aria-hidden="true">${foodEmoji(it.name, info.drink)}</span>
+      <div class="it"><div>${esc(it.name)}</div><div class="tags">${tagChips(it.tags)}</div></div>
       <button class="x" data-del="${i}" aria-label="Remove ${esc(it.name)}">✕</button></li>`;
-  }).join('')}</ul>` : `<p class="empty">Nothing added yet. Search above or pick from your favorites.</p>`}
+  }).join('')}</ul>` : `<p class="empty"><span class="big">🍽️</span>Nothing here yet! Search above or tap a favorite.</p>`}
   <div class="savebar"><button class="btn primary block" id="fsave" ${!d.dirty ? 'disabled' : ''}>${d.dirty ? `Save ${slotLabel.toLowerCase()}` : mealRec(f.date, f.slot) ? 'Saved ✓' : `Save ${slotLabel.toLowerCase()}`}</button></div>`;
 
   const changed = () => { d.dirty = true; viewFood(main); };
@@ -288,7 +331,7 @@ function viewFood(main) {
     if (!q) { res.hidden = true; return; }
     const hits = searchFoods(q);
     const exact = hits.some(h => foodKey(h.name) === foodKey(q));
-    res.innerHTML = hits.map(h => `<button data-pick="${esc(h.name)}"><span>${h.drink ? '🥤 ' : ''}${esc(h.name)}${h.fav ? ' ★' : ''}</span><span class="tags">${tagChips(h.tags.slice(0, 3))}</span></button>`).join('')
+    res.innerHTML = hits.map(h => `<button data-pick="${esc(h.name)}"><span>${foodEmoji(h.name, h.drink)} ${esc(h.name)}${h.fav ? ' ★' : ''}</span><span class="tags">${tagChips(h.tags.slice(0, 3))}</span></button>`).join('')
       + (exact ? '' : `<button class="addnew" data-new="${esc(q)}">＋ Add “${esc(q)}” as a new item</button>`);
     res.hidden = false;
     $$('[data-pick]', res).forEach(b => (b.onclick = () => { addItem(d, b.dataset.pick); d.dirty = true; keepSearch(); }));
@@ -303,7 +346,7 @@ function viewFood(main) {
       if (rec) { await delRec('meals', rec.id); toast(`${slotLabel} cleared`); }
     } else {
       await putRec('meals', { id: rec?.id || uid(), date: f.date, slot: f.slot, time: d.time, items: d.items });
-      toast(`${slotLabel} saved`);
+      celebrate($('#fsave'), `${MEALS.find(m => m.key === f.slot).emoji} ${slotLabel} saved!`);
     }
     d.dirty = false;
     viewFood(main);
@@ -394,7 +437,7 @@ function viewStool(main) {
       <button class="it plain" data-edit="${x.id}"><div>${fmtTime(x.time)} · Type ${x.type} · ${STOOL_AMOUNTS.find(a => a.key === x.amount)?.label || ''}</div>
       <div class="tags">${x.flags.map(k => `<span class="tag ${k === 'blood' ? 'warn' : ''}">${STOOL_FLAGS.find(f => f.key === k)?.label}</span>`).join('')}${x.notes ? `<span class="muted"> ${esc(x.notes)}</span>` : ''}</div></button>
       <button class="x" data-sdel="${x.id}" aria-label="Delete entry">✕</button></li>`).join('')}</ul>`
-    : '<p class="empty">No entries for this day.</p>'}`;
+    : '<p class="empty"><span class="big">🧻</span>Nothing logged for this day.</p>'}`;
 
   $('#sdate').onchange = e => { if (e.target.value) { s.date = e.target.value; viewStool(main); } };
   $('#stime').onchange = e => { s.time = e.target.value || s.time; };
@@ -414,7 +457,7 @@ function viewStool(main) {
   if ($('#snotes')) $('#snotes').oninput = e => { s.notes = e.target.value; };
   if ($('#ssave')) $('#ssave').onclick = async () => {
     await putRec('stools', { id: s.id || uid(), date: s.date, time: s.time, type: s.type, amount: s.amount, flags: s.flags, notes: s.notes.trim() });
-    toast(s.id ? 'Changes saved' : 'Saved');
+    if (s.id) toast('Changes saved'); else celebrate($('#ssave'));
     const keepDate = s.date;
     ui.stool = stoolDraft();
     ui.stool.date = keepDate;
@@ -450,7 +493,11 @@ function figureSVG(view, opts = {}) {
        <ellipse cx="100" cy="212" rx="1.6" ry="2.4" class="dot"/>
        <path d="M70 238 Q84 258 100 272 M130 238 Q116 258 100 272" opacity=".45"/>
        <path d="M72 362 Q78 368 86 362 M128 362 Q122 368 114 362" opacity=".5"/>
-       <path d="M90 36 Q92.5 34.5 95 36 M105 36 Q107.5 34.5 110 36" opacity=".35"/>`
+       ${isSimple() ? '<path d="M90 36 Q92.5 34.5 95 36 M105 36 Q107.5 34.5 110 36" opacity=".35"/>'
+         : `<g class="face"><ellipse cx="91" cy="38" rx="2.6" ry="3.4"/><ellipse cx="109" cy="38" rx="2.6" ry="3.4"/>
+            <circle cx="92" cy="37" r=".9" fill="#fff"/><circle cx="110" cy="37" r=".9" fill="#fff"/>
+            <ellipse cx="85" cy="47" rx="4" ry="2.4" class="cheek"/><ellipse cx="115" cy="47" rx="4" ry="2.4" class="cheek"/>
+            <path d="M93 49 Q100 55 107 49" class="smile"/></g>`}`
     : `<path d="M100 84 V236" stroke-dasharray="1.5 4" opacity=".8"/>
        <path d="M66 110 Q72 136 90 132 M134 110 Q128 136 110 132"/>
        <path d="M92 228 Q100 222 108 228" opacity=".5"/>
@@ -504,7 +551,7 @@ function viewHealth(main) {
   <div class="bodybar">
     ${H.zoom ? `<button class="btn small" id="hfull">← Full body</button>
       <div class="seg small"><button data-mode="pin" class="${H.mode === 'pin' ? 'on' : ''}">📍 Pin</button><button data-mode="area" class="${H.mode === 'area' ? 'on' : ''}">⭕ Circle</button></div>`
-      : '<div class="hint">Tap the area where you feel it</div>'}
+      : '<div class="hint">👆 Tap where it hurts or feels funny</div>'}
   </div>
   ${H.zoom ? `<div class="hint center">${H.mode === 'pin' ? 'Tap the exact spot' : 'Draw a circle around the area with your finger'}</div>`
     : '<div class="figlabels"><span>Front</span><span>Back</span></div>'}
@@ -517,11 +564,11 @@ function viewHealth(main) {
   <p class="muted small center">R and L are the person's own right and left sides.</p>
   <h2 class="section">${relDay(H.date)}</h2>
   ${entries.length ? `<ul class="items">${entries.map(e => `<li>
-      <span class="sevdot" style="background:${sevColor(maxSev(e) || 1)}">${maxSev(e) || ''}</span>
+      <span class="sevdot ${isSimple() ? '' : 'face'}" style="background:${sevColor(maxSev(e) || 1)}" title="Strongest: ${maxSev(e)}/10">${isSimple() ? maxSev(e) || '' : sevFace(maxSev(e) || 1)[1]}</span>
       <button class="it plain" data-hedit="${e.id}"><div>${fmtTime(e.time)} · ${esc(e.regionLabel)}${e.shape?.kind === 'area' ? ' · area' : ''}</div>
       <div class="tags">${e.items.map(i => `<span class="tag">${esc(i.name)} ${i.sev}</span>`).join('')}${e.notes ? `<span class="muted"> ${esc(e.notes)}</span>` : ''}</div></button>
       <button class="x" data-hdel="${e.id}" aria-label="Delete entry">✕</button></li>`).join('')}</ul>`
-    : '<p class="empty">Nothing logged for this day.</p>'}`;
+    : '<p class="empty"><span class="big">😊</span>Nothing logged for this day. Feeling good?</p>'}`;
 
   const svg = $('#body');
   const scale = () => H.vb[2] / FULL_VB[2];
@@ -650,13 +697,14 @@ function symptomSheet(entry, after) {
       <div class="sheet-head"><h3>${esc(entry.regionLabel)}</h3><button class="x" data-close aria-label="Close">✕</button></div>
       <label class="field inline"><span>Time</span><input type="time" id="stime2" value="${time}"></label>
       ${entry.cats.length > 1 ? `<div class="chips cats">${entry.cats.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-cat="${c}">${SYMPTOMS[c].label}${counts(c) ? ` · ${counts(c)}` : ''}</button>`).join('')}</div>` : ''}
-      <p class="muted">What are you feeling? Tap all that apply, then set how strong (1 = mild, 10 = worst).</p>
+      <p class="muted">What does it feel like? Tap all that fit, then slide to show how bad it is.</p>
       <div class="symlist">
         ${SYMPTOMS[cat].items.map(n => {
           const k = `${cat}|${n}`, s = sel.get(k);
           return `<div class="sym ${s ? 'on' : ''}">
             <button class="symbtn" data-sym="${esc(k)}" aria-pressed="${!!s}"><span class="check">${s ? '✓' : ''}</span>${esc(n)}</button>
-            ${s ? `<div class="sev"><input type="range" min="1" max="10" step="1" value="${s.sev}" data-sev="${esc(k)}" aria-label="${esc(n)} strength"><b style="background:${sevColor(s.sev)}">${s.sev}</b></div>` : ''}
+            ${s ? `<div class="sev">${isSimple() ? '' : `<span class="sevface" aria-hidden="true">${sevFace(s.sev)[1]}</span>`}<input type="range" min="1" max="10" step="1" value="${s.sev}" data-sev="${esc(k)}" aria-label="${esc(n)} strength"><b style="background:${sevColor(s.sev)}">${s.sev}</b></div>
+              <div class="sevword">${sevFace(s.sev)[2]}</div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -679,9 +727,12 @@ function symptomSheet(entry, after) {
     $$('[data-sev]', box).forEach(r => (r.oninput = () => {
       const s = sel.get(r.dataset.sev);
       s.sev = +r.value;
-      const b = r.nextElementSibling;
+      const b = r.nextElementSibling, f = sevFace(s.sev);
       b.textContent = s.sev;
       b.style.background = sevColor(s.sev);
+      const face = r.previousElementSibling;
+      if (face) face.textContent = f[1];
+      r.parentElement.nextElementSibling.textContent = f[2];
     }));
     $('#symsave', box).onclick = async () => {
       const rec = {
@@ -692,7 +743,7 @@ function symptomSheet(entry, after) {
       await putRec('symptoms', rec);
       saved = true;
       closeSheet(true);
-      toast('Saved');
+      celebrate($('#hgeneral'));
     };
   };
   draw();
@@ -712,6 +763,10 @@ function backupBanner() {
 function viewSettings(main) {
   const customs = [...catalog().values()].filter(f => f.custom || f.fav || DATA.foods.some(u => u.key === f.key && u.tags));
   main.innerHTML = `
+  <section class="card">
+    <h2>Look</h2>
+    <div class="seg"><button data-look="fun" class="${isSimple() ? '' : 'on'}">🎈 Playful</button><button data-look="simple" class="${isSimple() ? 'on' : ''}">Simple</button></div>
+  </section>
   <section class="card">
     <h2>About you</h2>
     <label class="field"><span>Your name (shown on doctor reports)</span><input id="sname" value="${esc(SETTINGS.name)}" placeholder="Optional"></label>
@@ -736,6 +791,12 @@ function viewSettings(main) {
     <p class="muted">Health Log ${APP_VERSION}. A personal journal — not a medical device. The analysis shows patterns in what you logged; it can’t diagnose anything or prove a cause. Share your report with your doctor before changing your diet or treatment.</p>
     <button class="btn danger block" id="wipe">Delete all my data</button>
   </section>`;
+  $$('[data-look]', main).forEach(b => (b.onclick = () => {
+    const simple = b.dataset.look === 'simple';
+    document.documentElement.classList.toggle('simple', simple);
+    store.set('look', simple ? 'simple' : 'fun');
+    render();
+  }));
   $('#sname').onchange = async e => { SETTINGS.name = e.target.value.trim(); await saveSettings(); toast('Saved'); };
   $('#bk').onclick = backup;
   $('#rs').onchange = e => e.target.files[0] && restore(e.target.files[0]);
@@ -822,7 +883,7 @@ async function exportCSV() {
   }
   $('#gear').onclick = () => go('settings');
   $('#back').onclick = () => (history.length > 1 ? history.back() : go('analysis'));
-  window.addEventListener('hashchange', () => { closeSheet(); window.scrollTo(0, 0); render(); });
+  window.addEventListener('hashchange', () => { closeSheet(); $('#toast').hidden = true; window.scrollTo(0, 0); render(); });
   render();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

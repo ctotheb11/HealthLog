@@ -536,7 +536,7 @@ function viewAnalysis(main) {
   ${backupBanner()}
   <div class="seg">${RANGES.map(r => `<button data-range="${r.key}" class="${r.key === key ? 'on' : ''}">${r.label}</button>`).join('')}</div>
   <p class="muted small center">${fmtDate(A.b.start, { year: true })} – ${fmtDate(A.b.end, { year: true })}</p>
-  ${A.active ? insightsHTML(A) : '<p class="empty">Nothing logged yet. Start with the 🍔, 💩 and ➕ tabs — your patterns will show up here.</p>'}
+  ${A.active ? insightsHTML(A) : '<p class="empty"><span class="big">🔍</span>Nothing logged yet! Start with the 🍔, 💩 and ➕ tabs and your patterns will show up here.</p>'}
   <div class="card">
     <a class="btn primary block" href="#/report?range=${key}">📄 Create a doctor report</a>
     <p class="muted small">These are patterns in what you logged, not a diagnosis. Some will be coincidences — the more days you log, the more reliable they get. Talk to your doctor before cutting out foods.</p>
