@@ -111,8 +111,26 @@ function associations(days) {
     }
     return pick;
   };
+  // If one food accounts for nearly all of an ingredient's days and explains the
+  // link about as well, name that food (more useful than "Corn, mostly from Takis").
+  const preferFood = pick => {
+    if (!pick || pick.e.kind !== 'tag') return pick;
+    const tagDays = days.filter(d => d.meals && d.tags.has(pick.e.name));
+    let best = null;
+    for (const f of cands) {
+      if (f.kind !== 'food' || used.has(f.name)) continue;
+      const share = tagDays.filter(d => d.foods.has(f.name)).length / Math.max(1, tagDays.length);
+      if (share < 0.75) continue;
+      const { a, b } = compare(days, hasExp(f), d => resid[d.i], pick.r.lag);
+      if (a.length < 4 || b.length < 4) continue;
+      const w = welch(a, b);
+      if (Math.sign(w.t) === Math.sign(pick.r.t) && Math.abs(w.t) >= 0.85 * Math.abs(pick.r.t) && (!best || Math.abs(w.t) > Math.abs(best.r.t)))
+        best = { e: f, r: { ...w, lag: pick.r.lag, n1: a.length, n0: b.length } };
+    }
+    return best || pick;
+  };
   for (let step = 0; step < 8; step++) {
-    const pick = scan(resid, used);
+    const pick = preferFood(scan(resid, used));
     if (!pick) break;
     // How strong does the best match look when food timing is scrambled?
     const nullMax = [];
@@ -426,6 +444,7 @@ function assocCard(o) {
       <span class="muted">(avg score ${o.ma.toFixed(1)} vs ${o.mb.toFixed(1)}; ${o.n1} vs ${o.n0} days)</span>.</div>
     ${o.topGroup ? `<div class="muted">Most affected: ${esc(o.topGroup)}.</div>` : ''}
     ${o.sources?.length ? `<div class="muted">Mostly from: ${o.sources.map(esc).join(', ')}.</div>` : ''}
+    ${o.kind === 'food' && foodInfo(o.name).tags?.length ? `<div class="muted">Contains: ${foodInfo(o.name).tags.map(t => esc((TAGS[t] || t).toLowerCase())).join(', ')}. Any of these could be the cause.</div>` : ''}
     ${o.stool && Math.abs(o.stool.after - o.stool.other) >= 0.15 ? `<div class="muted">Loose stools: ${pctTxt(o.stool.after)} of days after vs ${pctTxt(o.stool.other)} otherwise.</div>` : ''}
   </li>`;
 }

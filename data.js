@@ -8,9 +8,9 @@ const TAGS = {
   F: 'Fish', H: 'Shellfish', T: 'Tree nuts', K: 'Peanuts', L: 'Beans & legumes', C: 'Corn',
   U: 'Added sugar', A: 'Artificial sweetener', X: 'Alcohol', Y: 'Caffeine', R: 'Fried',
   Q: 'Processed', Z: 'Spicy', O: 'High-FODMAP', I: 'Citrus', W: 'Fermented', V: 'Vegetables',
-  B: 'Fruit', J: 'Whole grains', c: 'Carbonated',
+  B: 'Fruit', J: 'Whole grains', c: 'Carbonated', d: 'Artificial dyes',
 };
-const TAG_ORDER = 'GDESNMPFHTKLCUAXYRQZOIWVBJc'.split('');
+const TAG_ORDER = 'GDESNMPFHTKLCUAXYRQZOIWVBJcd'.split('');
 
 // "Name|tag codes". Tags are a best guess for a typical version of the item;
 // each person can change the tags on any food from Settings → My foods.
@@ -329,13 +329,401 @@ Liquor / spirits|X
 Hard seltzer|X c
 `;
 
+// Brand-name items. Tags reflect the usual US recipe (recipes change, and
+// anyone can adjust tags in Settings → My foods). "# Section|emoji" lines set
+// the emoji for the items under them; a third "|emoji" field overrides it.
+const BRAND_FOOD_LIST = `
+# Cereal & breakfast|🥣
+Fruity Pebbles|U Q d
+Cocoa Pebbles|U Q
+Froot Loops|G C U Q d
+Lucky Charms|J U Q d
+Cheerios|J
+Honey Nut Cheerios|J U
+Cinnamon Toast Crunch|G J U Q
+Frosted Flakes|G C U Q
+Corn Flakes (Kellogg's)|G C
+Rice Krispies|G U Q
+Raisin Bran|G J U B O
+Frosted Mini-Wheats|G J U
+Cap'n Crunch|G C U Q
+Cap'n Crunch's Crunch Berries|G C U Q d
+Apple Jacks|G C U Q d
+Cocoa Puffs|C J U Q
+Trix|C J U Q
+Reese's Puffs|C K U Q
+Golden Grahams|G J U Q
+Honey Bunches of Oats|G J C U Q
+Special K|G U Q
+Kix|C J
+Corn Pops|C U Q
+Life cereal|G J U
+Rice Chex|
+Wheaties|G J
+Quaker instant oatmeal (flavored)|J U
+Pop-Tarts (frosted strawberry)|G U Q d B|🥐
+Pop-Tarts (brown sugar cinnamon)|G U Q|🥐
+Eggo waffles|G E D Q|🧇
+Kodiak Cakes pancakes|G J D E|🥞
+Jimmy Dean breakfast sandwich|G E D M Q|🥪
+Toaster Strudel|G D E U Q S|🥐
+Pillsbury cinnamon rolls|G U Q S|🥐
+# Bars|🍫
+Nutri-Grain bar|G J U Q B
+Nature Valley granola bar|J U S
+Quaker Chewy granola bar|J U Q
+Clif Bar|J S U
+Kind bar|T U
+RXBAR|E T
+Larabar|T B
+belVita breakfast biscuits|G J U|🍪
+Nature's Bakery fig bar|G J B U O
+Rice Krispies Treats|G U Q
+# Cookies & snack cakes|🍪
+Oreo cookies|G U Q S
+Golden Oreos|G U Q S
+Chips Ahoy!|G U Q S
+Nutter Butter|G K U Q
+Nilla Wafers|G E U Q
+Teddy Grahams|G U Q
+Honey Maid graham crackers|G J U
+Animal crackers|G U
+Fig Newtons|G B U O
+Girl Scout Thin Mints|G U Q S
+Girl Scout Samoas|G D U Q S
+Pepperidge Farm Milano cookies|G D E U
+Keebler Fudge Stripes|G D U Q S
+Little Debbie Oatmeal Creme Pie|G J E U Q S
+Little Debbie Cosmic Brownies|G E U Q S d|🍫
+Little Debbie Zebra Cakes|G E U Q S|🍰
+Little Debbie Honey Bun|G U Q R S|🍩
+Little Debbie Swiss Rolls|G E U Q S|🍰
+Hostess Twinkies|G E D U Q S|🍰
+Hostess Ding Dongs|G E D U Q S|🍰
+Hostess cupcakes|G E D U Q S|🧁
+Hostess Donettes|G D E U Q R S|🍩
+Krispy Kreme glazed donut|G D E U R S|🍩
+Dunkin' donut|G D E U R S|🍩
+Dunkin' Munchkins|G D E U R S|🍩
+Starbucks cake pop|G D E U Q|🍭
+Uncrustables (PB&J)|G K U Q|🥪
+# Chips, crackers & popcorn|🥔
+Doritos Nacho Cheese|C D N R Q O|🌮
+Doritos Cool Ranch|C D N R Q O|🌮
+Cheetos|C D R Q|🧀
+Flamin' Hot Cheetos|C D N R Q Z d|🌶️
+Takis|C N R Q Z I d|🌶️
+Lay's potato chips|N R Q
+Lay's Sour Cream & Onion|N D R Q O
+Lay's Barbecue chips|N R Q U
+Pringles|N G R Q
+Ruffles|N R Q
+Kettle Brand chips|N R
+Sun Chips|J C R Q|🌾
+Fritos|C R Q|🌽
+Tostitos tortilla chips|C R Q|🌽
+Funyuns|C R Q O|🧅
+Cheez-It crackers|G D Q|🧀
+Goldfish crackers|G D Q|🐟
+Ritz crackers|G Q S|🍘
+Triscuit|G J|🍘
+Wheat Thins|G J U|🍘
+Club crackers|G Q|🍘
+Saltine crackers|G|🍘
+Lance peanut butter crackers|G K Q S d|🍘
+Annie's Cheddar Bunnies|G D|🐰
+Pirate's Booty|C D Q|🍿
+SkinnyPop popcorn|C J|🍿
+Smartfood white cheddar popcorn|C J D Q|🍿
+Microwave popcorn (butter)|C J D Q|🍿
+Chex Mix|G C D Q S|🥨
+Gardetto's|G D Q S|🥨
+Rold Gold pretzels|G Q|🥨
+Snyder's pretzels|G Q|🥨
+Combos|G D Q|🥨
+Veggie Straws|N V Q
+Planters peanuts|K|🥜
+Planters mixed nuts|T K|🥜
+Blue Diamond almonds|T|🥜
+# Candy & chocolate|🍬
+M&M's|D U S Q d|🍫
+Peanut M&M's|D K U S Q d|🍫
+Reese's Peanut Butter Cups|D K U S Q|🍫
+Reese's Pieces|K U Q d
+Snickers|D K E U S Q|🍫
+Kit Kat|G D U S Q|🍫
+Twix|G D U S Q|🍫
+Hershey's milk chocolate bar|D U S Q Y|🍫
+Hershey's Kisses|D U S Q Y|🍫
+Milky Way|G D E U S Q|🍫
+3 Musketeers|D E U S Q|🍫
+Butterfinger|K C U S Q|🍫
+Almond Joy|T D U S Q|🍫
+Mounds|U S Q|🍫
+York Peppermint Pattie|C U Q S|🍫
+Whoppers|G D U S Q|🍫
+Milk Duds|D C U S Q|🍫
+Ferrero Rocher|T G D U S|🍫
+Lindt Lindor truffles|D U S|🍫
+Dove chocolate|D U S Y|🍫
+Ghirardelli chocolate|D U S Y|🍫
+Cadbury Creme Egg|D U Q|🥚
+Kinder Bueno|G D T U S|🍫
+Skittles|C U Q d
+Starburst|C U Q B d
+Sour Patch Kids|C U Q d
+Swedish Fish|C U Q d|🐟
+Twizzlers|G C U Q d
+Haribo Goldbears|C U Q|🧸
+Gummy worms|C U Q d|🪱
+Jolly Rancher|C U Q d
+Airheads|C U Q d
+Nerds|C U Q d
+Life Savers|C U Q d
+Tootsie Roll|D S U Q
+Tootsie Pop|C U Q d|🍭
+Ring Pop|C U Q d|💍
+Peeps|C U Q d|🐣
+Candy corn|C U Q d
+Hot Tamales|C U Q Z d
+Junior Mints|C U Q
+Gushers|C U Q d
+Fruit by the Foot|C U Q d
+Fruit Roll-Ups|C U Q d
+Welch's fruit snacks|C U B
+Mott's fruit snacks|C U B
+# Frozen treats|🍦
+Ben & Jerry's ice cream|D E U
+Haagen-Dazs ice cream|D E U
+Klondike bar|D U S Q
+Drumstick ice cream cone|G D K U S Q
+Ice cream sandwich|G D U Q S
+Dippin' Dots|D U Q d
+Bomb Pop|C U Q d|🍭
+Freeze pops|U Q d|🍭
+Oreo McFlurry (McDonald's)|G D U Q S
+Wendy's Frosty|D U Q
+# Dairy & lunchbox|🧀
+Go-Gurt|D W U Q|🥣
+Yoplait yogurt|D W U|🥣
+Chobani Greek yogurt|D W|🥣
+Danimals yogurt|D W U Q|🥣
+Babybel cheese|D
+Kraft Singles|D Q
+Velveeta|D Q
+Sargento string cheese|D
+Tillamook cheese|D
+Philadelphia cream cheese|D
+Lunchables (turkey & cheddar)|G D P Q|🍱
+Lunchables pizza|G D N Q|🍕
+Jell-O pudding cup|D U Q|🍮
+Snack Pack pudding|D U Q|🍮
+Jell-O gelatin cup|U Q d|🍮
+Mott's applesauce|B O|🍎
+GoGo squeeZ applesauce|B O|🍎
+# Meals & frozen|🍽️
+Kraft Mac & Cheese|G D Q|🧀
+Easy Mac|G D Q|🧀
+Annie's Mac & Cheese|G D|🧀
+Velveeta Shells & Cheese|G D Q|🧀
+Stouffer's mac & cheese|G D Q|🧀
+Chef Boyardee ravioli|G M N D Q|🥫
+SpaghettiOs|G N Q|🥫
+Campbell's chicken noodle soup|G P Q|🥫
+Campbell's tomato soup|N U Q|🥫
+Cup Noodles|G S Q|🍜
+Maruchan ramen|G S Q|🍜
+Hot Pockets (pepperoni pizza)|G D M N Q|🥟
+Bagel Bites|G D N Q|🍕
+Totino's Pizza Rolls|G D N M Q|🍕
+DiGiorno pizza|G D N Q|🍕
+Tombstone pizza|G D N M Q|🍕
+Tyson chicken nuggets|P G R Q|🍗
+Dino nuggets|P G R Q|🦕
+Gorton's fish sticks|F G R Q|🐟
+Ore-Ida Tater Tots|N R Q|🍟
+Ore-Ida french fries|N R Q|🍟
+Hamburger Helper|G D M Q
+Lean Cuisine meal|G D Q
+Rice-A-Roni|G Q|🍚
+Pillsbury crescent rolls|G Q S|🥐
+Hormel chili|M L N Q|🍲
+Bush's baked beans|L U O|🫘
+Old El Paso taco kit|C N Q|🌮
+Morningstar veggie burger|S G E D Q|🍔
+Beyond Burger|L Q|🍔
+Impossible Burger|S Q|🍔
+Oscar Mayer hot dogs|M Q|🌭
+Ball Park franks|M Q|🌭
+Oscar Mayer bologna|M P Q|🥪
+Jimmy Dean sausage|M Q|🥓
+Spam|M Q|🥫
+Slim Jim|M Q Z S|🥩
+StarKist tuna|F|🐟
+# Bread, spreads & sauces|🍞
+Wonder Bread|G U Q S
+Nature's Own bread|G U
+Dave's Killer Bread|G J U
+Thomas' English muffins|G
+King's Hawaiian rolls|G D E U
+Jif peanut butter|K U|🥜
+Skippy peanut butter|K U|🥜
+Nutella|T D U S|🍫
+Smucker's jelly|U B|🍇
+Heinz ketchup|N U|🍅
+Hellmann's mayonnaise|E|🥚
+Hidden Valley Ranch|D E Q O|🥗
+Frank's RedHot|N Z|🌶️
+Sriracha|N Z O|🌶️
+Tabasco|N Z|🌶️
+Sweet Baby Ray's BBQ sauce|U N O Q|🍖
+Tostitos salsa|N V|🍅
+Tostitos queso|D N Q|🧀
+Kraft grated Parmesan|D|🧀
+Land O'Lakes butter|D|🧈
+I Can't Believe It's Not Butter|D S Q|🧈
+Cool Whip|D C U Q|🍦
+Reddi-wip|D U|🍦
+# Fast food|🍔
+McDonald's Big Mac|G D E M S Q
+McDonald's cheeseburger|G D M Q U
+McDonald's Chicken McNuggets|P G R Q|🍗
+McDonald's french fries|N R Q G D|🍟
+McDonald's Egg McMuffin|G D E M|🥪
+McDonald's hash brown|N R Q|🥔
+Chick-fil-A chicken sandwich|P G D E R|🥪
+Chick-fil-A nuggets|P G D E R|🍗
+Chick-fil-A waffle fries|N R|🍟
+Chick-fil-A sauce|E U Q|🥫
+Wendy's Baconator|G D M Q
+Burger King Whopper|G M N E Q
+In-N-Out burger|G D M N E
+Five Guys burger|G E M
+Taco Bell Crunchwrap Supreme|G C D M N Q|🌯
+Taco Bell crunchy taco|C D M N Q|🌮
+Taco Bell bean burrito|G L D N Q O|🌯
+Chipotle burrito|G L D N M Z|🌯
+Chipotle burrito bowl|L D N V|🥗
+Subway sandwich|G Q|🥪
+Arby's roast beef sandwich|G M Q|🥪
+Domino's pizza|G D N Q|🍕
+Pizza Hut pizza|G D N Q|🍕
+Papa John's pizza|G D N Q|🍕
+Little Caesars pizza|G D N Q|🍕
+KFC fried chicken|P G D E R Z|🍗
+Popeyes fried chicken|P G R Z|🍗
+Popeyes biscuit|G D R|🍞
+Raising Cane's chicken fingers|P G E D R|🍗
+Raising Cane's sauce|E N Q|🥫
+Wingstop wings|P R Z|🍗
+Buffalo Wild Wings wings|P R Z D|🍗
+Panda Express Orange Chicken|P G E S U R I|🍊
+Panera mac & cheese|G D|🧀
+`;
+
+const BRAND_DRINK_LIST = `
+# Soda|🥤
+Coca-Cola|U c Y
+Diet Coke|A c Y
+Coke Zero|A c Y
+Pepsi|U c Y
+Diet Pepsi|A c Y
+Sprite|U c I
+Sprite Zero|A c I
+Mountain Dew|U c Y I d
+Dr Pepper|U c Y
+Fanta Orange|U c I d
+A&W Root Beer|U c
+Canada Dry Ginger Ale|U c
+7UP|U c I
+Sunkist orange soda|U c Y d
+# Sports, juice & kids' drinks|🧃
+Gatorade|U d
+Gatorade Zero|A d
+Powerade|C U d
+BodyArmor|U B
+Prime Hydration|A B
+Liquid I.V.|U|💧
+Vitaminwater|U
+Pedialyte|A|💧
+Capri Sun|U B
+Kool-Aid|U d
+Hawaiian Punch|C U B d
+SunnyD|C U I d
+Juicy Juice|B
+Minute Maid lemonade|U I|🍋
+Simply Orange juice|B I|🍊
+Tropicana orange juice|B I|🍊
+# Tea & coffee|☕
+Arizona Iced Tea|C U Y|🍵
+Snapple|U B|🍵
+Lipton iced tea|U Y|🍵
+Starbucks latte|Y D
+Starbucks Frappuccino|Y D U Q
+Starbucks bottled Frappuccino|Y D U
+Starbucks Pink Drink|Y U B|🍓
+Starbucks Refresher|Y U B|🍓
+Dunkin' iced coffee|Y D U
+Coffee-mate creamer|D Q U|🥛
+International Delight creamer|D Q U|🥛
+# Energy drinks|⚡
+Red Bull|U Y c
+Sugar-free Red Bull|A Y c
+Monster Energy|U Y c
+Celsius|A Y c
+Bang Energy|A Y c
+# Milk & shakes|🥛
+Nesquik chocolate milk|D U Q
+Fairlife milk|D
+Lactaid milk|D
+Silk almond milk|T
+Silk soy milk|S
+Oatly oat milk|J
+Yoo-hoo|D U Q
+Ensure|D S U Q
+Premier Protein shake|D A Q
+Core Power protein shake|D Q
+Muscle Milk|D A Q
+Carnation Instant Breakfast|D U Q
+Swiss Miss hot cocoa|D U Q|☕
+# Sparkling water|💧
+LaCroix|c
+Bubly|c
+Spindrift|c B I
+Topo Chico|c
+Smartwater|
+# Alcohol|🍺
+White Claw|X c|🍹
+Truly hard seltzer|X c|🍹
+Bud Light|X G c
+Corona|X G c
+Michelob Ultra|X G c
+Coors Light|X G c
+Modelo|X G C c
+Mike's Hard Lemonade|X U I c|🍋
+Twisted Tea|X Y U c
+`;
+
+// "Name|tags" or "Name|tags|emoji"; "# Section|emoji" sets a default emoji.
 function parseList(txt, drink) {
-  return txt.trim().split('\n').map(l => {
-    const [name, codes = ''] = l.split('|');
-    return { name: name.trim(), tags: codes.trim() ? codes.trim().split(/\s+/) : [], drink };
-  });
+  let sectionEmoji = null;
+  const out = [];
+  for (const l of txt.trim().split('\n')) {
+    if (!l.trim()) continue;
+    if (l.startsWith('#')) { sectionEmoji = l.split('|')[1]?.trim() || null; continue; }
+    const [name, codes = '', emoji] = l.split('|');
+    const item = { name: name.trim(), tags: codes.trim() ? codes.trim().split(/\s+/) : [], drink };
+    const e = emoji?.trim() || sectionEmoji;
+    if (e) item.emoji = e;
+    out.push(item);
+  }
+  return out;
 }
-const BUILTIN_FOODS = [...parseList(FOOD_LIST, false), ...parseList(DRINK_LIST, true)];
+const BUILTIN_FOODS = [
+  ...parseList(FOOD_LIST, false), ...parseList(DRINK_LIST, true),
+  ...parseList(BRAND_FOOD_LIST, false), ...parseList(BRAND_DRINK_LIST, true),
+];
+const BUILTIN_EMOJI = new Map(BUILTIN_FOODS.filter(f => f.emoji).map(f => [f.name.toLowerCase(), f.emoji]));
 
 /* ---------------- meals ---------------- */
 const MEALS = [
@@ -371,6 +759,8 @@ const FOOD_EMOJI = [
   ['bean|lentil|chickpea|hummus|edamame|tofu|tempeh', '🫘'], ['sauerkraut|kimchi', '🥬'],
 ].map(([k, e]) => [new RegExp(k, 'i'), e]);
 function foodEmoji(name, drink) {
+  const own = BUILTIN_EMOJI.get(String(name).trim().toLowerCase());
+  if (own) return own;
   const hit = FOOD_EMOJI.find(([re]) => re.test(name));
   return hit ? hit[1] : drink ? '🥤' : '🍽️';
 }

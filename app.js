@@ -2,7 +2,7 @@
 // All entries are stored only on this device (IndexedDB).
 'use strict';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 /* ---------------- small helpers ---------------- */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -133,14 +133,25 @@ function frequentFoods(limit = 15) {
   const cat = catalog();
   return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([k, c]) => ({ ...(cat.get(k) || { name: k, tags: [] }), count: c }));
 }
+// Forgiving search: ignores punctuation and spaces inside brand names
+// ("cheezits" → Cheez-It) and plurals ("oreos" → Oreo).
+const squash = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '');
+function wordMatches(name, nameSquashed, w) {
+  const ws = squash(w);
+  if (!ws) return true;
+  if (name.includes(w) || nameSquashed.includes(ws)) return true;
+  const singular = ws.replace(/(es|s)$/, '');
+  return singular.length >= 3 && (nameSquashed.includes(singular) || nameSquashed.includes(ws.replace(/s$/, '')));
+}
 function searchFoods(q) {
   q = q.trim().toLowerCase();
   if (!q) return [];
   const words = q.split(/\s+/);
   const freq = new Map(frequentFoods(60).map(f => [f.key, f.count]));
+  const qs = squash(q);
   return [...catalog().values()]
-    .filter(f => words.every(w => f.name.toLowerCase().includes(w)))
-    .map(f => ({ f, score: (f.name.toLowerCase().startsWith(q) ? 100 : 0) + (f.fav ? 50 : 0) + (freq.get(f.key) || 0) }))
+    .filter(f => { const n = f.name.toLowerCase(), ns = squash(n); return words.every(w => wordMatches(n, ns, w)); })
+    .map(f => { const ns = squash(f.name), q1 = qs.replace(/s$/, ''); return { f, score: (ns.startsWith(qs) || f.name.toLowerCase().startsWith(q) ? 100 : ns.startsWith(q1) && q1.length >= 3 ? 90 : 0) + (f.fav ? 50 : 0) + (freq.get(f.key) || 0) }; })
     .sort((a, b) => b.score - a.score || a.f.name.localeCompare(b.f.name))
     .slice(0, 12).map(x => x.f);
 }

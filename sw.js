@@ -1,6 +1,6 @@
 // Offline support: keeps a copy of the app files on the device.
 // Your data is never here — it lives in the app's local database.
-const CACHE = 'health-log-v4';
+const CACHE = 'health-log-v5';
 const ASSETS = ['./', 'index.html', 'styles.css', 'data.js', 'app.js', 'analysis.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
